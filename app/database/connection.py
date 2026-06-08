@@ -11,6 +11,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # 3. Clase base de la que heredarán todos nuestros futuros modelos ORM
 Base = declarative_base()
 
+# --- IMPORTANTE PARA ALEMBIC ---
+# Importamos los modelos aquí para que se registren en Base.metadata
+from app.models.usuario import Rol, Usuario
+
 # 4. Función estándar (Dependencia) para abrir y cerrar la BD limpiamente
 def get_db():
     db = SessionLocal()

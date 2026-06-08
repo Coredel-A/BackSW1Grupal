@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import receta_router
+from app.routers import auth, usuarios
 
 app = FastAPI(
     title="PHARMAGNOSTIC AI API",
@@ -17,8 +18,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir los routers (rutas modulares)
-app.include_router(receta_router.router, prefix="/api/v1")
+# 3. REGISTRO DE TODAS LAS RUTAS EN EL SERVIDOR
+# Tus rutas de recetas existentes:
+app.include_router(receta_router.router) 
+
+# Tus nuevas rutas de autenticación y gestión de usuarios:
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(usuarios.router, prefix="/api/v1")
+
 
 @app.get("/")
 def read_root():
