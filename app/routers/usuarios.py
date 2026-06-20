@@ -32,7 +32,7 @@ def obtener_todos_los_roles(db: Session = Depends(get_db)):
 @router.get("/{id}", response_model=UsuarioOut)
 def obtener_usuario_por_id(id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     """Obtiene el perfil de un usuario. (Administradores o el propio usuario)."""
-    if current_user.rol.nombre != "administrador" and current_user.id != id:
+    if current_user.rol.nombre != "administrador" and current_user.id_usuario != id:
         raise HTTPException(status_code=403, detail="No tienes autorización para ver perfiles ajenos.")
     
     usuario = UsuarioRepository.get_by_id(db, id)

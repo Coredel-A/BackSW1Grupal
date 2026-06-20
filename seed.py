@@ -9,12 +9,17 @@ from app.database.connection import SessionLocal
 from app.models.usuario import Rol, Usuario
 from app.core.security import hash_password
 
-# Roles institucionales que usa la lógica de negocio (ver usuario_service.py)
-ROLES_BASE = ["administrador", "medico", "farmaceutico"]
+# Los cuatro roles institucionales (spec §5)
+ROLES_BASE = [
+    ("administrador", "Acceso total: gestiona usuarios, catálogo y auditoría."),
+    ("medico", "Gestiona pacientes, diagnósticos y emite recetas."),
+    ("farmaceutico", "Verifica integridad y dispensa recetas en farmacia."),
+    ("paciente", "Consulta sus recetas activas y usa el chatbot."),
+]
 
-# Credenciales del administrador inicial (cámbialas luego desde la app si querés)
-ADMIN_CORREO = "admin@pharma.com"
-ADMIN_PASSWORD = "admin123"
+# Credenciales del administrador inicial (spec §5). Se fuerza el cambio en el primer login.
+ADMIN_CORREO = "admin@pharmagnostic.local"
+ADMIN_PASSWORD = "Admin1234"
 ADMIN_NOMBRE = "Admin"
 ADMIN_APELLIDO = "Sistema"
 
@@ -23,10 +28,10 @@ def seed() -> None:
     db = SessionLocal()
     try:
         # 1. Crear los roles que aún no existan
-        for nombre_rol in ROLES_BASE:
-            existe = db.query(Rol).filter(Rol.nombre == nombre_rol).first()
-            if not existe:
-                db.add(Rol(nombre=nombre_rol))
+        for nombre_rol, descripcion in ROLES_BASE:
+            rol = db.query(Rol).filter(Rol.nombre == nombre_rol).first()
+            if not rol:
+                db.add(Rol(nombre=nombre_rol, descripcion=descripcion))
                 print(f"[seed] Rol creado: {nombre_rol}")
         db.commit()
 
@@ -42,10 +47,11 @@ def seed() -> None:
                 nombre=ADMIN_NOMBRE,
                 apellido=ADMIN_APELLIDO,
                 correo=ADMIN_CORREO,
-                hashed_password=hash_password(ADMIN_PASSWORD),
+                contrasena_hash=hash_password(ADMIN_PASSWORD),
                 numero_licencia=None,
                 activo=True,
-                id_rol=rol_admin.id,
+                requiere_cambio_password=True,  # fuerza el cambio en el primer ingreso
+                id_rol=rol_admin.id_rol,
             )
         )
         db.commit()

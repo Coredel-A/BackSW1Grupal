@@ -3,13 +3,15 @@ from typing import Any, Union
 from jose import jwt
 from passlib.context import CryptContext
 
+from app.core.config import settings
+
 # Configuración del algoritmo de hashing para contraseñas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Configuración de JWT (Idealmente estas constantes vendrían de tus settings)
-SECRET_KEY = "TU_CLAVE_SECRETA_SUPER_COMPLEJA_PARA_DESARROLLO" 
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 horas tal como planeaste
+# Configuración de JWT leída desde settings (.env / variables de entorno)
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES  # 8 horas por defecto
 
 def hash_password(password: str) -> str:
     """Recibe la contraseña en texto plano y devuelve el hash brypt."""

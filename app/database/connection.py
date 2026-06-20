@@ -12,8 +12,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # --- IMPORTANTE PARA ALEMBIC ---
-# Importamos los modelos aquí para que se registren en Base.metadata
-from app.models.usuario import Rol, Usuario
+# Importamos TODOS los modelos aquí para que se registren en Base.metadata
+# (el paquete app.models reexporta cada entidad en su __init__).
+import app.models  # noqa: F401,E402
 
 # 4. Función estándar (Dependencia) para abrir y cerrar la BD limpiamente
 def get_db():

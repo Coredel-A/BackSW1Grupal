@@ -6,6 +6,8 @@ sqlalchemy==2.0.30
 psycopg2-binary==2.9.9
 alembic
 pydantic-settings
+python-dotenv
 passlib[bcrypt]
 bcrypt==4.0.1
 python-jose[cryptography]
+reportlab

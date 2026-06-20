@@ -7,7 +7,7 @@ class UsuarioRepository:
     @staticmethod
     def get_by_id(db: Session, usuario_id: int) -> Optional[Usuario]:
         """Busca un usuario por su ID primario."""
-        return db.query(Usuario).filter(Usuario.id == usuario_id).first()
+        return db.query(Usuario).filter(Usuario.id_usuario == usuario_id).first()
 
     @staticmethod
     def get_by_correo(db: Session, correo: str) -> Optional[Usuario]:

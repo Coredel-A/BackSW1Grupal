@@ -2,104 +2,131 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password, create_access_token
-from app.models.usuario import Usuario, Rol  # 💡 Importamos también el modelo Rol
+from app.models.usuario import Usuario, Rol
 from app.repositories.usuario_repo import UsuarioRepository
-# 💡 Importamos UsuarioUpdate para la edición de datos
-from app.schemas.usuario import UsuarioCreate, LoginRequest, TokenResponse, UsuarioUpdate
+from app.repositories.paciente_repo import PacienteRepository
+from app.schemas.usuario import (
+    UsuarioCreate,
+    UsuarioUpdate,
+    LoginRequest,
+    TokenResponse,
+    CambioPasswordRequest,
+)
+
+# Roles que exigen número de licencia profesional (spec 7.1)
+ROLES_CON_LICENCIA = {"medico", "farmaceutico"}
+
 
 class UsuarioService:
 
     @staticmethod
     def registrar_usuario(db: Session, datos_usuario: UsuarioCreate) -> Usuario:
-        """Valida duplicados, genera licencias institucionales, hashea el password y registra."""
-        # 1. Verificar si el correo ya existe
-        usuario_existente = UsuarioRepository.get_by_correo(db, datos_usuario.correo)
-        if usuario_existente:
+        """Valida duplicados y requisitos por rol, hashea el password y registra."""
+        # 1. Verificar si el correo ya existe (409 Conflicto)
+        if UsuarioRepository.get_by_correo(db, datos_usuario.correo):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El correo electrónico ya se encuentra registrado."
+                status_code=status.HTTP_409_CONFLICT,
+                detail="El correo electrónico ya se encuentra registrado.",
             )
-        
-        # 2. Buscar el rol en la base de datos para saber su nombre real (médico, farmacéutico, etc.)
-        rol_db = db.query(Rol).filter(Rol.id == datos_usuario.id_rol).first()
+
+        # 2. Verificar que el rol exista
+        rol_db = db.query(Rol).filter(Rol.id_rol == datos_usuario.id_rol).first()
         if not rol_db:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="El rol seleccionado no existe en el sistema."
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="El rol seleccionado no existe en el sistema.",
             )
 
-        # 3. ✨ GENERACIÓN AUTOMÁTICA DE LICENCIA CLÍNICA
-        licencia_autogenerada = None
-        
-        # Solo generamos número de licencia si el rol corresponde a personal operativo de salud
-        if rol_db.nombre in ["medico", "farmaceutico"]:
-            # Contamos cuántos usuarios existen con este rol para armar el correlativo
-            conteo_usuarios = db.query(Usuario).filter(Usuario.id_rol == datos_usuario.id_rol).count()
-            prefijo = "MED" if rol_db.nombre == "medico" else "FAR"
-            
-            # Formato automático resultante: MED-2026-001, MED-2026-002, etc.
-            licencia_autogenerada = f"{prefijo}-2026-{str(conteo_usuarios + 1).zfill(3)}"
+        # 3. Validaciones por rol (spec 7.1)
+        numero_licencia = None
+        id_paciente_vinculado = None
 
-        # 4. Hashear la contraseña en texto plano
-        password_hasheado = hash_password(datos_usuario.password)
+        if rol_db.nombre in ROLES_CON_LICENCIA:
+            if not datos_usuario.numero_licencia:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El número de licencia es obligatorio para médicos y farmacéuticos.",
+                )
+            numero_licencia = datos_usuario.numero_licencia
 
-        # 5. Mapear al Modelo de SQLAlchemy ORM inyectando la licencia calculada
+        elif rol_db.nombre == "paciente":
+            if not datos_usuario.ci_paciente:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Debes vincular la cuenta a un paciente existente mediante su CI.",
+                )
+            paciente = PacienteRepository.get_by_ci(db, datos_usuario.ci_paciente)
+            if not paciente:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No existe un paciente registrado con ese CI.",
+                )
+            id_paciente_vinculado = paciente.id_paciente
+
+        # 4. Hashear la contraseña y construir el modelo ORM
         nuevo_usuario = Usuario(
             nombre=datos_usuario.nombre,
             apellido=datos_usuario.apellido,
             correo=datos_usuario.correo,
-            hashed_password=password_hasheado,
-            numero_licencia=licencia_autogenerada,  # 💻 ¡Asignado automáticamente aquí!
-            id_rol=datos_usuario.id_rol
+            contrasena_hash=hash_password(datos_usuario.password),
+            numero_licencia=numero_licencia,
+            id_paciente_vinculado=id_paciente_vinculado,
+            id_rol=datos_usuario.id_rol,
         )
 
-        # 6. Guardar mediante el repositorio
+        # 5. Guardar mediante el repositorio
         return UsuarioRepository.create(db, nuevo_usuario)
 
     @staticmethod
     def login_usuario(db: Session, credenciales: LoginRequest) -> TokenResponse:
         """Autentica las credenciales y genera un Token JWT."""
-        # 1. Buscar que el usuario exista
         usuario = UsuarioRepository.get_by_correo(db, credenciales.correo)
+        # Usuario inexistente o desactivado -> 401 (aunque las credenciales sean correctas)
         if not usuario or not usuario.activo:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Credenciales incorrectas o usuario inactivo."
+                detail="Credenciales incorrectas o usuario inactivo.",
             )
 
-        # 2. Verificar la contraseña cryptográficamente
-        if not verify_password(credenciales.password, usuario.hashed_password):
+        if not verify_password(credenciales.password, usuario.contrasena_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Credenciales incorrectas."
+                detail="Credenciales incorrectas.",
             )
 
-        # 3. Preparar los datos del Payload que irán dentro del JWT
-        payload_data = {
-            "sub": str(usuario.id),
-            "rol": usuario.rol.nombre
-        }
-
-        # 4. Crear el token firmado
+        # El id del usuario que actúa siempre se extrae del token en el backend
+        payload_data = {"sub": str(usuario.id_usuario), "rol": usuario.rol.nombre}
         token_jwt = create_access_token(data=payload_data)
 
-        return TokenResponse(access_token=token_jwt, token_type="bearer")
+        return TokenResponse(
+            access_token=token_jwt,
+            token_type="bearer",
+            requiere_cambio_password=usuario.requiere_cambio_password,
+        )
 
-    # ✨ MÉTODO COMPLEMENTARIO: Actualización de datos (Requerimiento A-16)
     @staticmethod
     def actualizar_usuario(db: Session, db_obj: Usuario, obj_in: UsuarioUpdate) -> Usuario:
-        """
-        Modifica dinámicamente un usuario existente.
-        Solo actualiza los campos enviados, protegiendo el resto (como las licencias o hashes).
-        """
-        # Convertimos el esquema de Pydantic a diccionario omitiendo campos no enviados (unset)
+        """Modifica dinámicamente un usuario existente (solo los campos enviados)."""
         update_data = obj_in.model_dump(exclude_unset=True)
-
         for campo in update_data:
             if hasattr(db_obj, campo):
                 setattr(db_obj, campo, update_data[campo])
 
-        # Persistimos y guardamos los cambios a través del repositorio
         UsuarioRepository.update(db)
         db.refresh(db_obj)
         return db_obj
+
+    @staticmethod
+    def cambiar_password(db: Session, usuario: Usuario, datos: CambioPasswordRequest) -> Usuario:
+        """Cambia la contraseña del usuario autenticado y limpia el flag de cambio forzado."""
+        if not verify_password(datos.password_actual, usuario.contrasena_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña actual es incorrecta.",
+            )
+
+        usuario.contrasena_hash = hash_password(datos.password_nuevo)
+        usuario.requiere_cambio_password = False
+        UsuarioRepository.update(db)
+        db.refresh(usuario)
+        return usuario
