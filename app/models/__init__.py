@@ -13,6 +13,8 @@ from app.models.receta_medicamento import RecetaMedicamento
 from app.models.audio_clinico import AudioClinico
 from app.models.validacion_ia import ValidacionIA
 from app.models.alerta_clinica import AlertaClinica
+from app.models.trazabilidad_blockchain import TrazabilidadBlockchain
+from app.models.dispensacion import Dispensacion
 
 __all__ = [
     "Rol",
@@ -26,4 +28,6 @@ __all__ = [
     "AudioClinico",
     "ValidacionIA",
     "AlertaClinica",
+    "TrazabilidadBlockchain",
+    "Dispensacion",
 ]

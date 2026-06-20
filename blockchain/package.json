@@ -1,0 +1,11 @@
+{
+  "name": "pharmagnostic-blockchain",
+  "version": "1.0.0",
+  "description": "Nodo Ethereum local (Hardhat) y contrato de registro de recetas",
+  "private": true,
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "ethers": "^6.13.4",
+    "hardhat": "^2.22.17"
+  }
+}

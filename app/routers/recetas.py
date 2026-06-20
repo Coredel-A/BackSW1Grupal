@@ -94,6 +94,26 @@ def eliminar_medicamento(
     return RecetaService.eliminar_medicamento(db, id_receta, id_receta_med)
 
 
+@router.post("/{id_receta}/emitir", response_model=RecetaOut)
+def emitir_receta(
+    id_receta: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(medico_o_admin),
+):
+    """Aprueba y emite la receta: genera hash, lo ancla en blockchain y pasa a 'validada'."""
+    return RecetaService.emitir_receta(db, id_receta, current_user.id_usuario)
+
+
+@router.patch("/{id_receta}/anular", response_model=RecetaOut)
+def anular_receta(
+    id_receta: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(medico_o_admin),
+):
+    """Anula una receta. El médico solo si está validada y no dispensada; el admin en cualquier estado."""
+    return RecetaService.anular_receta(db, id_receta, current_user)
+
+
 @router.get("/{id_receta}/pdf")
 def descargar_pdf(
     id_receta: int,

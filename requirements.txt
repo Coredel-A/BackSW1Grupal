@@ -16,3 +16,6 @@ langchain
 langchain-ollama
 chromadb==0.5.20
 faster-whisper
+# --- Blockchain (Sprint 3) ---
+web3
+qrcode[pil]
