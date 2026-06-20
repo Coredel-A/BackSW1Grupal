@@ -27,3 +27,15 @@ def invocar_llm(prompt: str, timeout: int | None = None) -> str:
         client_kwargs={"timeout": timeout},
     )
     return llm.invoke(prompt)
+
+
+def invocar_chat(prompt: str, timeout: int | None = None) -> str:
+    """Invoca a Llama 3 en modo conversacional (texto libre), para el chatbot del paciente."""
+    timeout = timeout or settings.LLM_TIMEOUT_SECONDS
+    llm = OllamaLLM(
+        model=settings.LLM_MODEL,
+        base_url=settings.OLLAMA_BASE_URL,
+        temperature=0.2,
+        client_kwargs={"timeout": timeout},
+    )
+    return llm.invoke(prompt)
