@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, usuarios, pacientes, diagnosticos, medicamentos, recetas
+from app.routers import auth, usuarios, pacientes, diagnosticos, medicamentos, recetas, validaciones, audio
 
 app = FastAPI(
     title="PHARMAGNOSTIC AI API",
@@ -25,6 +25,8 @@ app.include_router(pacientes.router)     # /pacientes
 app.include_router(diagnosticos.router)  # /diagnosticos
 app.include_router(medicamentos.router)  # /medicamentos
 app.include_router(recetas.router)       # /recetas
+app.include_router(validaciones.router)  # /recetas/{id}/validar, /ia/health
+app.include_router(audio.router)         # /audio
 
 
 @app.get("/")

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.medicamento_catalogo import MedicamentoCatalogo
 from app.repositories.medicamento_repo import MedicamentoRepository
 from app.schemas.medicamento import MedicamentoCreate, MedicamentoUpdate
+from app.ai import vademecum
 
 
 class MedicamentoService:
@@ -13,7 +14,9 @@ class MedicamentoService:
     def crear_medicamento(db: Session, datos: MedicamentoCreate) -> MedicamentoCatalogo:
         nuevo = MedicamentoCatalogo(**datos.model_dump())
         medicamento = MedicamentoRepository.create(db, nuevo)
-        # TODO Sprint 2: construir texto descriptivo e indexar en ChromaDB (colección vademecum_medicamentos)
+        # Indexa en el vademécum vectorial (tolerante a fallos: no rompe el CRUD)
+        if medicamento.activo:
+            vademecum.indexar_medicamento(medicamento)
         return medicamento
 
     @staticmethod
@@ -38,12 +41,20 @@ class MedicamentoService:
             setattr(medicamento, campo, valor)
         MedicamentoRepository.update(db)
         db.refresh(medicamento)
-        # TODO Sprint 2: re-indexar en ChromaDB; si quedó inactivo, eliminar su entrada del vademécum
+        # Re-indexa si está activo; si quedó inactivo, lo saca del vademécum
+        if medicamento.activo:
+            vademecum.indexar_medicamento(medicamento)
+        else:
+            vademecum.eliminar_medicamento(medicamento.id_medicamento)
         return medicamento
 
     @staticmethod
     def cambiar_estado(db: Session, id_medicamento: int) -> MedicamentoCatalogo:
         medicamento = MedicamentoService.obtener_medicamento(db, id_medicamento)
         medicamento = MedicamentoRepository.toggle_activo(db, medicamento)
-        # TODO Sprint 2: si se desactivó, eliminar su entrada de ChromaDB; si se reactivó, re-indexar
+        # Si se reactivó -> re-indexa; si se desactivó -> elimina del vademécum
+        if medicamento.activo:
+            vademecum.indexar_medicamento(medicamento)
+        else:
+            vademecum.eliminar_medicamento(medicamento.id_medicamento)
         return medicamento

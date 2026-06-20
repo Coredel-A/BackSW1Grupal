@@ -26,5 +26,17 @@ class Settings:
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))  # 8 horas
 
+    # --- IA local (Sprint 2) ---
+    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama3:8b")
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+    CHROMA_HOST: str = os.getenv("CHROMA_HOST", "localhost")
+    CHROMA_PORT: int = int(os.getenv("CHROMA_PORT", "8000"))
+    # Timeout alto para tolerar el arranque en frío (carga del modelo a VRAM la 1ª vez)
+    LLM_TIMEOUT_SECONDS: int = int(os.getenv("LLM_TIMEOUT_SECONDS", "120"))
+    # Carpeta donde se guardan los audios clínicos subidos
+    AUDIO_DIR: str = os.getenv("AUDIO_DIR", "/app/audios")
+    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "base")
+
 
 settings = Settings()

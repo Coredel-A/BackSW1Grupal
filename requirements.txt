@@ -11,3 +11,8 @@ passlib[bcrypt]
 bcrypt==4.0.1
 python-jose[cryptography]
 reportlab
+# --- IA local (Sprint 2) ---
+langchain
+langchain-ollama
+chromadb==0.5.20
+faster-whisper

@@ -10,6 +10,9 @@ from app.models.diagnostico import Diagnostico
 from app.models.medicamento_catalogo import MedicamentoCatalogo
 from app.models.receta import Receta
 from app.models.receta_medicamento import RecetaMedicamento
+from app.models.audio_clinico import AudioClinico
+from app.models.validacion_ia import ValidacionIA
+from app.models.alerta_clinica import AlertaClinica
 
 __all__ = [
     "Rol",
@@ -20,4 +23,7 @@ __all__ = [
     "MedicamentoCatalogo",
     "Receta",
     "RecetaMedicamento",
+    "AudioClinico",
+    "ValidacionIA",
+    "AlertaClinica",
 ]
